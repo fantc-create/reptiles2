@@ -120,7 +120,7 @@
         /* 左下角篩選按鈕樣式 */
         .filter-container {
             display: flex;
-            justify-content: flex-start; /* 靠左對齊 */
+            justify-content: flex-start; 
             gap: 10px;
             margin-top: 10px;
         }
@@ -131,6 +131,7 @@
             color: #555;
             border: 1px solid #cdd5df;
             border-radius: 20px;
+            cursor: pointer;
         }
         .filter-btn.active {
             background-color: var(--history-color);
@@ -155,7 +156,6 @@
             .na-text { text-align: left; color: #ccc; }
         }
 
-        /* Loading 遮罩 */
         #loading { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255,255,255,0.8); z-index: 999; justify-content: center; align-items: center; font-size: 1.2em; font-weight: bold; color: var(--primary-color); }
     </style>
 </head>
@@ -279,7 +279,6 @@
     const ENTRY_NAME = "entry.801019313"; 
     const ENTRY_TEXT = "entry.668473026"; 
 
-    // 用來暫存分類好的資料
     let cachedRecords = { all: '', today: '', past: '' };
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -356,86 +355,4 @@
         
         fetch(url).then(res => res.text()).then(text => {
             try {
-                const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
-                const rows = json.table.rows;
-                
-                let allHtml = '', todayHtml = '', pastHtml = '';
-                
-                // 動態抓取設備的「今天日期」，未來任何一天都會自動適用
-                const now = new Date();
-                const y = now.getFullYear();
-                const m = String(now.getMonth() + 1).padStart(2, '0');
-                const d = String(now.getDate()).padStart(2, '0');
-                const mNum = now.getMonth() + 1;
-                const dNum = now.getDate();
-                
-                const todayFormats = [`${y}-${m}-${d}`, `${y}/${mNum}/${dNum}`, `${y}/${m}/${d}`];
-
-                if (rows && rows.length > 1) {
-                    for (let i = rows.length - 1; i >= 1; i--) {
-                        const r = rows[i].c;
-                        if(!r) continue;
-                        
-                        const dateStr = r[1] ? (r[1].f || r[1].v || "") : "";
-                        const name = r[2] ? (r[2].v || "") : "";
-                        const detail = r[3] ? (r[3].v || "") : "";
-                        
-                        if (name || detail) {
-                            const rowHtml = `<tr>
-                                <td data-label="護理日期">${dateStr}</td>
-                                <td data-label="負責學生"><strong>${name}</strong></td>
-                                <td data-label="完成項目" class="record-details">${detail}</td>
-                            </tr>`;
-                            
-                            allHtml += rowHtml;
-                            
-                            // 判斷是否為今天
-                            let isToday = todayFormats.some(format => dateStr.includes(format));
-                            if (isToday) {
-                                todayHtml += rowHtml;
-                            } else {
-                                pastHtml += rowHtml;
-                            }
-                        }
-                    }
-                }
-                
-                // 暫存在變數中，準備給按鈕切換
-                cachedRecords.all = allHtml || `<tr><td colspan="3" style="text-align:center;color:#999;padding:20px;">目前尚無任何紀錄</td></tr>`;
-                cachedRecords.today = todayHtml || `<tr><td colspan="3" style="text-align:center;color:#999;padding:20px;">今天尚無填寫任何紀錄</td></tr>`;
-                cachedRecords.past = pastHtml || `<tr><td colspan="3" style="text-align:center;color:#999;padding:20px;">尚無過往紀錄</td></tr>`;
-                
-                // 預設顯示全部
-                applyFilter('all');
-                
-            } catch(e) {
-                document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;padding:20px;">讀取失敗：請確定試算表已開啟共用權限</td></tr>`;
-            }
-        }).catch(err => {
-            document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;padding:20px;">網路連線錯誤，無法載入雲端資料</td></tr>`;
-        });
-    }
-
-    // 左下角按鈕切換功能
-    function applyFilter(type) {
-        // 替換表格內容
-        document.getElementById('historyList').innerHTML = cachedRecords[type];
-        
-        // 切換按鈕的顏色 (啟用狀態)
-        document.getElementById('f-all').classList.remove('active');
-        document.getElementById('f-today').classList.remove('active');
-        document.getElementById('f-past').classList.remove('active');
-        
-        document.getElementById('f-' + type).classList.add('active');
-    }
-
-    function resetForm(confirmAction) {
-        if (!confirmAction || confirm('確定要清空表格嗎？')) {
-            document.getElementById('studentName').value = '';
-            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-            document.querySelectorAll('.qty-input, .weight-input').forEach(input => input.value = ''); 
-        }
-    }
-</script>
-</body>
-</html>
+                const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") +
