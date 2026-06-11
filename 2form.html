@@ -100,8 +100,11 @@
         th { background-color: #f8f9fa; font-weight: bold; color: #555; text-align: center; }
         
         .checkbox-label { display: flex; align-items: center; margin-bottom: 10px; cursor: pointer; }
-        .feed-item { display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 10px; gap: 10px; }
-        .qty-input { width: 70px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 4px; }
+        
+        /* 餵食與磅重排版欄位 */
+        .feed-item, .weight-item { display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 10px; gap: 8px; }
+        .qty-input, .weight-input { width: 70px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 4px; }
+        
         .checkbox-label input[type="checkbox"] { margin-right: 10px; width: 22px; height: 22px; accent-color: var(--primary-color); }
         .na-text { color: #aaa; font-style: italic; text-align: center; }
         .animal-name { font-weight: bold; font-size: 1.1em; text-align: center; background-color: #f0f4f8; }
@@ -113,7 +116,7 @@
 
         /* 歷史紀錄表格樣式 */
         .history-table th { background-color: #2c3e50; color: white; }
-        .table-today th { background-color: var(--today-color); } /* 今天的表格顏色 */
+        .table-today th { background-color: var(--today-color); }
         .record-details { line-height: 1.6; white-space: pre-line; color: #444; }
 
         /* 手機版卡片化自動轉換 */
@@ -126,8 +129,6 @@
             td::before { content: attr(data-label); font-weight: bold; color: var(--primary-color); display: block; margin-bottom: 5px; font-size: 0.9em; }
             .na-text::before { display: none; }
             .na-text { text-align: left; color: #ccc; }
-            
-            /* 手機版的今天表格外框變色 */
             .table-today tr { border-color: var(--today-color); }
         }
 
@@ -170,7 +171,7 @@
                 <td data-label="💧 保濕"><label class="checkbox-label"><input type="checkbox" value="噴水"> 噴水</label></td>
                 <td data-label="💩 排泄"><label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label><label class="checkbox-label"><input type="checkbox" value="脫皮保濕"> 脫皮保濕</label></td>
                 <td data-label="🔒 鎖缸"><label class="checkbox-label"><input type="checkbox" value="確認鎖缸"> 確認鎖缸</label></td>
-                <td data-label="⚖️ 磅重"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重"> 每 2 星期磅重</label></td>
+                <td data-label="⚖️ 磅重"><div class="weight-item"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重" class="weight-cb"> 磅重</label><input type="number" step="0.1" class="weight-input" placeholder="克"> g</div></td>
             </tr>
             <tr>
                 <td class="animal-name">🐍 球蟒</td>
@@ -178,7 +179,7 @@
                 <td data-label="💧 保濕"><label class="checkbox-label"><input type="checkbox" value="噴水"> 噴水</label><label class="checkbox-label"><input type="checkbox" value="更換飲用水"> 更換飲用水</label></td>
                 <td data-label="💩 排泄"><label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label><label class="checkbox-label"><input type="checkbox" value="脫皮保濕"> 脫皮保濕</label></td>
                 <td data-label="🔒 鎖缸"><label class="checkbox-label"><input type="checkbox" value="確認鎖缸"> 確認鎖缸</label></td>
-                <td data-label="⚖️ 磅重"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重"> 每 2 星期磅重</label></td>
+                <td data-label="⚖️ 磅重"><div class="weight-item"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重" class="weight-cb"> 磅重</label><input type="number" step="0.1" class="weight-input" placeholder="克"> g</div></td>
             </tr>
             <tr>
                 <td class="animal-name">🦎 貢山龍蜥</td>
@@ -186,7 +187,7 @@
                 <td data-label="💧 保濕"><label class="checkbox-label"><input type="checkbox" value="噴水"> 噴水</label><label class="checkbox-label"><input type="checkbox" value="更換飲用水"> 更換飲用水</label></td>
                 <td data-label="💩 排泄"><label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label></td>
                 <td data-label="🔒 鎖缸"><label class="checkbox-label"><input type="checkbox" value="確認鎖缸"> 確認鎖缸</label></td>
-                <td data-label="⚖️ 磅重"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重"> 每 2 星期磅重</label></td>
+                <td data-label="⚖️ 磅重"><div class="weight-item"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重" class="weight-cb"> 磅重</label><input type="number" step="0.1" class="weight-input" placeholder="克"> g</div></td>
             </tr>
             <tr>
                 <td class="animal-name">🐢 眼斑水龜</td>
@@ -194,7 +195,7 @@
                 <td data-label="💧 保濕"><label class="checkbox-label"><input type="checkbox" value="加水至指定刻度"> 加水至櫃底刻度</label></td>
                 <td data-label="💩 排泄"><label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label></td>
                 <td data-label="🔒 鎖缸"><label class="checkbox-label"><input type="checkbox" value="確認鎖缸"> 確認鎖缸</label></td>
-                <td data-label="⚖️ 磅重"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重"> 每 2 星期磅重</label></td>
+                <td data-label="⚖️ 磅重"><div class="weight-item"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重" class="weight-cb"> 磅重</label><input type="number" step="0.1" class="weight-input" placeholder="克"> g</div></td>
             </tr>
             <tr>
                 <td class="animal-name">🐉 鬆獅蜥</td>
@@ -202,7 +203,7 @@
                 <td data-label="💧 保濕"><label class="checkbox-label"><input type="checkbox" value="浸泡 15-30 分鐘"> 浸泡15-30分(每週2次)</label></td>
                 <td data-label="💩 排泄"><label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label><label class="checkbox-label"><input type="checkbox" value="脫皮保濕"> 脫皮保濕</label></td>
                 <td data-label="🔒 鎖缸"><label class="checkbox-label"><input type="checkbox" value="確認鎖缸"> 確認鎖缸</label></td>
-                <td data-label="⚖️ 磅重"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重"> 每 2 星期磅重</label></td>
+                <td data-label="⚖️ 磅重"><div class="weight-item"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重" class="weight-cb"> 磅重</label><input type="number" step="0.1" class="weight-input" placeholder="克"> g</div></td>
             </tr>
             <tr>
                 <td class="animal-name">🐢 紅腿象龜</td>
@@ -210,7 +211,7 @@
                 <td data-label="💧 保濕"><label class="checkbox-label"><input type="checkbox" value="浸泡 15-30 分鐘"> 浸泡15-30分(每週2次)</label><label class="checkbox-label"><input type="checkbox" value="確保大水盆有水"> 大水盆要有水</label></td>
                 <td data-label="💩 排泄"><label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label></td>
                 <td data-label="🔒 鎖缸"><label class="checkbox-label"><input type="checkbox" value="確認鎖缸"> 確認鎖缸</label></td>
-                <td data-label="⚖️ 磅重"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重"> 每 2 星期磅重</label></td>
+                <td data-label="⚖️ 磅重"><div class="weight-item"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重" class="weight-cb"> 磅重</label><input type="number" step="0.1" class="weight-input" placeholder="克"> g</div></td>
             </tr>
             <tr>
                 <td class="animal-name">🌱 環境植物</td>
@@ -230,7 +231,6 @@
 </div>
 
 <div id="historySection" class="section-container">
-    
     <h3 class="history-title-today">🌟 今天的護理紀錄</h3>
     <table class="history-table table-today">
         <thead>
@@ -250,12 +250,11 @@
             <tr><td colspan="3" style="text-align:center; color:#999; padding:20px;">正在加載雲端資料...</td></tr>
         </tbody>
     </table>
-
 </div>
 
 <script>
     // ========================================================
-    // ✅ 已經完全設定好老師提供的所有雲端代碼！
+    // ✅ 雲端代碼保持不變
     // ========================================================
     const GOOGLE_FORM_ID = "1FAIpQLSdDOLdH348TldZy6OIsI5BmL6GHCNuKtq5QxVuAzzQi-K0PxQ"; 
     const SPREADSHEET_ID = "1igi8oFPaC4PTduqaep-RB9jpAFP4G8umdg6Tstdrmfk"; 
@@ -298,9 +297,15 @@
             if (checked.length > 0) {
                 let details = Array.from(checked).map(cb => {
                     let text = cb.value;
+                    // 1. 處理餵食數量
                     if (cb.classList.contains('feed-cb')) {
                         const qty = cb.closest('.feed-item').querySelector('.qty-input').value;
                         if (qty) text += ` (數量: ${qty})`;
+                    }
+                    // 2. 處理磅重克數 (新加入邏輯)
+                    if (cb.classList.contains('weight-cb')) {
+                        const weight = cb.closest('.weight-item').querySelector('.weight-input').value;
+                        if (weight) text += ` (重量: ${weight}g)`;
                     }
                     return text;
                 });
@@ -333,7 +338,7 @@
         });
     }
 
-    // 💡 關鍵：自動分類「今天」和「舊紀錄」
+    // 從雲端試算表自動分類下載
     function loadHistory() {
         const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
         
@@ -345,7 +350,6 @@
                 let todayHtml = '';
                 let oldHtml = '';
                 
-                // 取得並組合出今天的日期字串，防止不同格式比對失敗
                 const now = new Date();
                 const y = now.getFullYear();
                 const m = String(now.getMonth() + 1).padStart(2, '0');
@@ -353,7 +357,6 @@
                 const mNum = now.getMonth() + 1;
                 const dNum = now.getDate();
                 
-                // 雲端試算表可能出現的幾種日期格式
                 const format1 = `${y}-${m}-${d}`;
                 const format2 = `${y}/${mNum}/${dNum}`;
                 const format3 = `${y}/${m}/${d}`;
@@ -374,7 +377,6 @@
                                 <td data-label="完成項目" class="record-details">${detail}</td>
                             </tr>`;
                             
-                            // 檢查資料的日期是不是今天
                             if (date.includes(format1) || date.includes(format2) || date.includes(format3)) {
                                 todayHtml += rowHtml;
                             } else {
@@ -384,7 +386,6 @@
                     }
                 }
                 
-                // 寫入兩個不同的表格，如果空空的就顯示提示字
                 document.getElementById('todayList').innerHTML = todayHtml || `<tr><td colspan="3" style="text-align:center;color:#666;">今天尚無人填寫護理紀錄，趕快去填寫吧！</td></tr>`;
                 document.getElementById('oldList').innerHTML = oldHtml || `<tr><td colspan="3" style="text-align:center;color:#999;">目前尚無舊的歷史紀錄</td></tr>`;
                 
@@ -402,7 +403,7 @@
         if (!confirmAction || confirm('確定要清空表格嗎？')) {
             document.getElementById('studentName').value = '';
             document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
-            document.querySelectorAll('.qty-input').forEach(input => input.value = '');
+            document.querySelectorAll('.qty-input, .weight-input').forEach(input => input.value = ''); // 同步清除重量框
         }
     }
 </script>
