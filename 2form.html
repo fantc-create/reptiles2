@@ -237,13 +237,15 @@
     // ========================================================
     // ⚠️ 只需要在這裡填入你的 Google 表單與試算表資料，即可啟動雲端
     // ========================================================
-    const GOOGLE_FORM_ID = "請填入你的_Google表單ID"; 
-    const SPREADSHEET_ID = "請填入你的_Google試算表ID"; 
+    const GOOGLE_FORM_ID = "1FAIpQLSdDOLdH348TldZy6OIsI5BmL6GHCNuKtq5QxVuAzzQi-K0PxQ"; 
     
-    // 請填入表單三個問題對應的 entry ID (教學在下方說明)
-    const ENTRY_DATE = "entry.1111111111"; // 日期的代碼
-    const ENTRY_NAME = "entry.2222222222"; // 學生姓名的代碼
-    const ENTRY_TEXT = "entry.3333333333"; // 完成項目的代碼
+    // ✅ 已經幫你填好試算表 ID 囉！
+    const SPREADSHEET_ID = "1igi8oFPaC4PTduqaep-RB9jpAFP4G8umdg6Tstdrmfk"; 
+    
+    // 請填入表單三個問題對應的 entry ID
+    const ENTRY_DATE = "entry.2133590603"; // 日期的代碼
+    const ENTRY_NAME = "entry.801019313"; // 學生姓名的代碼
+    const ENTRY_TEXT = "entry.668473026"; // 完成項目的代碼
     // ========================================================
 
     document.addEventListener('DOMContentLoaded', () => {
@@ -266,7 +268,7 @@
         }
     }
 
-    // 🌟 核心魔法：後台悄悄上傳到雲端，學生完全看不到 Excel
+    // 上傳到雲端
     function uploadToCloud() {
         const name = document.getElementById('studentName').value.trim();
         const date = document.getElementById('recordDate').value;
@@ -290,8 +292,14 @@
         });
 
         if (completed.length === 0) { alert('請至少勾選一項護理項目！'); return; }
-        const fullText = completed.join('\n\n');
+        
+        // 檢查是否有設定表單 ID
+        if (GOOGLE_FORM_ID === "請填入你的_Google表單ID") {
+            alert('⚠️ 系統提示：你還沒有設定「Google 表單 ID」，目前無法上傳資料喔！請參考說明補上代碼。');
+            return;
+        }
 
+        const fullText = completed.join('\n\n');
         document.getElementById('loading').style.display = 'flex';
 
         // 打包數據
@@ -304,46 +312,63 @@
         fetch(`https://docs.google.com/forms/d/e/${GOOGLE_FORM_ID}/formResponse`, {
             method: 'POST',
             body: formData,
-            mode: 'no-cors' // 關鍵：繞過瀏覽器跨網域安全限制
+            mode: 'no-cors' 
         }).then(() => {
             document.getElementById('loading').style.display = 'none';
             alert('🎉 成功上傳雲端資料庫！');
             resetForm(false);
-            switchTab('history'); // 自動切換看歷史紀錄
+            switchTab('history'); 
         }).catch(err => {
             document.getElementById('loading').style.display = 'none';
             alert('連線失敗，請檢查網路或設定！');
         });
     }
 
-    // 🌟 核心魔法2：直接抓取雲端，並用網頁漂亮的表格呈現歷史紀錄
+    // 抓取雲端歷史紀錄
     function loadHistory() {
-        if (SPREADSHEET_ID.includes("請填入")) return;
+        if (!SPREADSHEET_ID || SPREADSHEET_ID.includes("請填入")) {
+            document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:#999;">尚未設定試算表 ID</td></tr>`;
+            return;
+        }
+        
         const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
         
         fetch(url).then(res => res.text()).then(text => {
-            const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
-            const rows = json.table.rows;
-            let html = '';
-            
-            if (rows && rows.length > 1) {
-                // 倒序顯示（最新的在最上面），跳過第一列標題
-                for (let i = rows.length - 1; i >= 1; i--) {
-                    const r = rows[i].c;
-                    if(!r[0]) continue;
-                    const date = r[0].f || r[0].v || "";
-                    const name = r[1] ? r[1].v : "";
-                    const detail = r[2] ? r[2].v : "";
-                    html += `<tr>
-                        <td>${date}</td>
-                        <td><strong>${name}</strong></td>
-                        <td class="record-details">${detail}</td>
-                    </tr>`;
+            try {
+                const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
+                const rows = json.table.rows;
+                let html = '';
+                
+                if (rows && rows.length > 0) {
+                    // 倒序顯示（最新的在最上面），不一定跳過第一列（視表單標題而定）
+                    let startIndex = (rows[0].c[0] && rows[0].c[0].v === "時間戳記") ? 1 : 0;
+                    
+                    for (let i = rows.length - 1; i >= startIndex; i--) {
+                        const r = rows[i].c;
+                        if(!r || !r[0]) continue;
+                        const date = r[0].f || r[0].v || "";
+                        const name = r[1] ? (r[1].v || "") : "";
+                        const detail = r[2] ? (r[2].v || "") : "";
+                        
+                        // 確保這列有資料才顯示
+                        if (name || detail) {
+                            html += `<tr>
+                                <td>${date}</td>
+                                <td><strong>${name}</strong></td>
+                                <td class="record-details">${detail}</td>
+                            </tr>`;
+                        }
+                    }
+                    if (html === '') html = `<tr><td colspan="3" style="text-align:center;color:#999;">目前尚無雲端紀錄</td></tr>`;
+                    document.getElementById('historyList').innerHTML = html;
+                } else {
+                    document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:#999;">目前尚無雲端紀錄</td></tr>`;
                 }
-                document.getElementById('historyList').innerHTML = html;
-            } else {
-                document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:#999;">目前尚無雲端紀錄</td></tr>`;
+            } catch(e) {
+                document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;">讀取失敗：請確定試算表權限已設為「知道連結的任何人都可以檢視」</td></tr>`;
             }
+        }).catch(err => {
+            document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;">網路連線錯誤或試算表設定錯誤</td></tr>`;
         });
     }
 
