@@ -8,6 +8,7 @@
         :root {
             --primary-color: #4A90E2;
             --success-color: #2ecc71;
+            --today-color: #1abc9c; /* 今天的紀錄專屬顏色 */
             --border-color: #ddd;
             --bg-color: #f5f7fa;
             --text-color: #333;
@@ -62,6 +63,9 @@
         .section-container.active { display: block; }
 
         h2, h3 { text-align: center; color: var(--text-color); margin-top: 0; }
+        
+        .history-title-today { color: var(--today-color); margin-bottom: 10px; font-size: 1.3em;}
+        .history-title-old { color: #555; margin-top: 40px; margin-bottom: 10px; font-size: 1.3em; }
 
         .header-info {
             display: flex;
@@ -107,8 +111,9 @@
         .btn-save { background-color: var(--success-color); color: white; width: 100%; max-width: 300px; }
         .btn-reset { background-color: #e0e0e0; color: #333; }
 
-        /* 歷史紀錄獨立美化表格 */
+        /* 歷史紀錄表格樣式 */
         .history-table th { background-color: #2c3e50; color: white; }
+        .table-today th { background-color: var(--today-color); } /* 今天的表格顏色 */
         .record-details { line-height: 1.6; white-space: pre-line; color: #444; }
 
         /* 手機版卡片化自動轉換 */
@@ -121,6 +126,9 @@
             td::before { content: attr(data-label); font-weight: bold; color: var(--primary-color); display: block; margin-bottom: 5px; font-size: 0.9em; }
             .na-text::before { display: none; }
             .na-text { text-align: left; color: #ccc; }
+            
+            /* 手機版的今天表格外框變色 */
+            .table-today tr { border-color: var(--today-color); }
         }
 
         /* Loading 遮罩 */
@@ -222,15 +230,27 @@
 </div>
 
 <div id="historySection" class="section-container">
-    <h3>📋 班級歷史護理紀錄 (雲端同步)</h3>
+    
+    <h3 class="history-title-today">🌟 今天的護理紀錄</h3>
+    <table class="history-table table-today">
+        <thead>
+            <tr><th style="width: 20%;">護理日期</th><th style="width: 20%;">負責學生</th><th style="width: 60%;">完成項目</th></tr>
+        </thead>
+        <tbody id="todayList">
+            <tr><td colspan="3" style="text-align:center; color:#999; padding:20px;">正在加載雲端資料...</td></tr>
+        </tbody>
+    </table>
+
+    <h3 class="history-title-old">📅 過去的歷史紀錄</h3>
     <table class="history-table">
         <thead>
             <tr><th style="width: 20%;">護理日期</th><th style="width: 20%;">負責學生</th><th style="width: 60%;">完成項目</th></tr>
         </thead>
-        <tbody id="historyList">
-            <tr><td colspan="3" style="text-align:center; color:#999; padding:30px;">正在加載雲端資料...</td></tr>
+        <tbody id="oldList">
+            <tr><td colspan="3" style="text-align:center; color:#999; padding:20px;">正在加載雲端資料...</td></tr>
         </tbody>
     </table>
+
 </div>
 
 <script>
@@ -313,45 +333,68 @@
         });
     }
 
-    // 💡 關鍵：從雲端試算表自動下載、解碼並顯示資料
+    // 💡 關鍵：自動分類「今天」和「舊紀錄」
     function loadHistory() {
         const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
         
         fetch(url).then(res => res.text()).then(text => {
             try {
-                // 解開 Google 特有的 JSON 包裝
                 const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
                 const rows = json.table.rows;
-                let html = '';
                 
+                let todayHtml = '';
+                let oldHtml = '';
+                
+                // 取得並組合出今天的日期字串，防止不同格式比對失敗
+                const now = new Date();
+                const y = now.getFullYear();
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const d = String(now.getDate()).padStart(2, '0');
+                const mNum = now.getMonth() + 1;
+                const dNum = now.getDate();
+                
+                // 雲端試算表可能出現的幾種日期格式
+                const format1 = `${y}-${m}-${d}`;
+                const format2 = `${y}/${mNum}/${dNum}`;
+                const format3 = `${y}/${m}/${d}`;
+
                 if (rows && rows.length > 1) {
-                    // 倒序迴圈：從最後一筆資料（最新）往回跑到第二筆（跳過第一行標題欄）
                     for (let i = rows.length - 1; i >= 1; i--) {
                         const r = rows[i].c;
                         if(!r) continue;
                         
-                        // 對應試算表欄位 (r[0]是自動產生的時間戳記，r[1]是同學選的日期，r[2]是姓名，r[3]是完成項目)
                         const date = r[1] ? (r[1].f || r[1].v || "") : "";
                         const name = r[2] ? (r[2].v || "") : "";
                         const detail = r[3] ? (r[3].v || "") : "";
                         
                         if (name || detail) {
-                            html += `<tr>
-                                <td>${date}</td>
-                                <td><strong>${name}</strong></td>
-                                <td class="record-details">${detail}</td>
+                            const rowHtml = `<tr>
+                                <td data-label="護理日期">${date}</td>
+                                <td data-label="負責學生"><strong>${name}</strong></td>
+                                <td data-label="完成項目" class="record-details">${detail}</td>
                             </tr>`;
+                            
+                            // 檢查資料的日期是不是今天
+                            if (date.includes(format1) || date.includes(format2) || date.includes(format3)) {
+                                todayHtml += rowHtml;
+                            } else {
+                                oldHtml += rowHtml;
+                            }
                         }
                     }
-                    document.getElementById('historyList').innerHTML = html || `<tr><td colspan="3" style="text-align:center;color:#999;">目前尚無雲端紀錄</td></tr>`;
-                } else {
-                    document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:#999;">目前尚無雲端紀錄</td></tr>`;
                 }
+                
+                // 寫入兩個不同的表格，如果空空的就顯示提示字
+                document.getElementById('todayList').innerHTML = todayHtml || `<tr><td colspan="3" style="text-align:center;color:#666;">今天尚無人填寫護理紀錄，趕快去填寫吧！</td></tr>`;
+                document.getElementById('oldList').innerHTML = oldHtml || `<tr><td colspan="3" style="text-align:center;color:#999;">目前尚無舊的歷史紀錄</td></tr>`;
+                
             } catch(e) {
-                document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;">讀取失敗：請確定試算表權限已設為「知道連結的任何人都可以檢視」</td></tr>`;
+                document.getElementById('todayList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;">讀取失敗：請確定試算表權限已設為「知道連結的任何人都可以檢視」</td></tr>`;
+                document.getElementById('oldList').innerHTML = ``;
             }
         }).catch(err => {
-            document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;">網路連線錯誤，無法載入雲端資料</td></tr>`;
+            document.getElementById('todayList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;">網路連線錯誤，無法載入雲端資料</td></tr>`;
+            document.getElementById('oldList').innerHTML = ``;
         });
     }
 
