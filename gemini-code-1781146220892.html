@@ -1,0 +1,599 @@
+<!DOCTYPE html>
+<html lang="zh-HK">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>動物/植物日常護理表與紀錄系統</title>
+    <style>
+        :root {
+            --primary-color: #4A90E2;
+            --success-color: #2ecc71;
+            --danger-color: #e74c3c;
+            --border-color: #ddd;
+            --bg-color: #f5f7fa;
+            --text-color: #333;
+        }
+
+        body {
+            font-family: "Microsoft JhengHei", "PingFang HK", sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            margin: 0;
+            padding: 15px;
+        }
+
+        /* 導覽列(分頁按鈕)樣式 */
+        .nav-tabs {
+            max-width: 1200px;
+            margin: 0 auto 20px auto;
+            display: flex;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            max-width: 200px;
+            background-color: #e0e0e0;
+            color: #555;
+            padding: 12px 10px;
+            font-size: 1em;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-align: center;
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary-color);
+            color: white;
+            box-shadow: 0 4px 10px rgba(74, 144, 226, 0.3);
+        }
+
+        /* 區塊隱藏與顯示 */
+        .section-container {
+            display: none;
+            max-width: 1200px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        .section-container.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        h2, h3 { text-align: center; color: var(--text-color); margin-top: 0; }
+
+        /* 輸入區塊排版 */
+        .header-info {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 20px;
+            margin-bottom: 25px;
+            font-size: 1.1em;
+            background-color: #f9fbfd;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e1e8ed;
+        }
+
+        .input-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex: 1;
+            min-width: 250px;
+        }
+
+        .input-group input[type="text"], 
+        .input-group input[type="date"] {
+            flex: 1;
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 8px 10px;
+            font-size: 1em;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .input-group input:focus { border-color: var(--primary-color); }
+
+        /* 電腦版表格樣式 */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            background: #fff;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            vertical-align: top;
+        }
+
+        th { background-color: #f8f9fa; font-weight: bold; color: #555; white-space: nowrap; text-align: center; }
+        
+        /* 元件設計 */
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+            cursor: pointer;
+            user-select: none;
+            padding: 5px 0;
+        }
+
+        .feed-item {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            margin-bottom: 10px;
+            gap: 10px;
+        }
+
+        .feed-item .checkbox-label { margin-bottom: 0; }
+
+        .qty-input {
+            width: 70px;
+            padding: 6px 8px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            font-size: 1em;
+            outline: none;
+        }
+
+        .checkbox-label input[type="checkbox"] {
+            margin-right: 10px;
+            width: 22px;
+            height: 22px;
+            accent-color: var(--primary-color);
+        }
+
+        .na-text { color: #aaa; font-style: italic; text-align: center; }
+        .animal-name { font-weight: bold; font-size: 1.1em; text-align: center; background-color: #f0f4f8; }
+
+        /* 按鈕區塊 */
+        .actions {
+            margin-top: 30px;
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 25px;
+            font-size: 1.1em;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.2s;
+            flex: 1;
+            max-width: 250px;
+        }
+
+        button:active { transform: scale(0.98); }
+        .btn-save { background-color: var(--success-color); color: white; }
+        .btn-reset { background-color: #e0e0e0; color: #333; }
+        .btn-export { background-color: #217346; color: white; }
+
+        .btn-delete { background-color: var(--danger-color); color: white; padding: 6px 12px; font-size: 0.9em; flex: none; }
+
+        /* 手機版響應式設計：將表格轉為卡片 */
+        @media (max-width: 768px) {
+            .section-container { padding: 15px; }
+            .header-info { flex-direction: column; gap: 15px; }
+            
+            table, thead, tbody, th, td, tr { display: block; width: 100%; box-sizing: border-box; }
+            thead { display: none; } 
+            
+            tr { 
+                border: 2px solid var(--primary-color); 
+                border-radius: 12px; 
+                margin-bottom: 20px; 
+                overflow: hidden; 
+                box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            }
+            
+            td.animal-name { 
+                background-color: var(--primary-color); 
+                color: white; 
+                font-size: 1.3em; 
+                padding: 12px; 
+                text-align: center; 
+            }
+            
+            td { 
+                border: none; 
+                border-bottom: 1px solid #eee; 
+                padding: 15px; 
+                position: relative; 
+            }
+            
+            td:last-child { border-bottom: none; }
+            
+            td:not(.animal-name)::before { 
+                content: attr(data-label); 
+                font-weight: bold; 
+                color: var(--primary-color); 
+                display: block; 
+                margin-bottom: 8px; 
+                font-size: 0.9em;
+                border-bottom: 2px dashed #eee;
+                padding-bottom: 5px;
+            }
+            
+            .na-text { text-align: left; color: #999; }
+        }
+
+        .record-item-details { line-height: 1.8; margin-top: 5px; }
+        .empty-msg { text-align: center; color: #999; padding: 40px 20px; }
+    </style>
+</head>
+<body>
+
+<div class="nav-tabs">
+    <button class="tab-btn active" id="btn-form" onclick="switchTab('form')">✏️ 填寫紀錄</button>
+    <button class="tab-btn" id="btn-history" onclick="switchTab('history')">📋 歷史紀錄</button>
+</div>
+
+<div id="formSection" class="section-container active">
+    <h2>日常護理填寫表</h2>
+    
+    <div class="header-info">
+        <div class="input-group">
+            <label for="studentName"><strong>負責學生：</strong></label>
+            <input type="text" id="studentName" placeholder="請輸入姓名">
+        </div>
+        <div class="input-group">
+            <label for="recordDate"><strong>日期：</strong></label>
+            <input type="date" id="recordDate">
+        </div>
+    </div>
+
+    <table id="careTable">
+        <thead>
+            <tr>
+                <th>動物/植物</th>
+                <th>餵食</th>
+                <th>每日保濕 / 更換飲水</th>
+                <th>排便與脫皮</th>
+                <th>離開前確認鎖缸</th>
+                <th>磅重</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td class="animal-name">🦗 蟋蟀</td>
+                <td data-label="📌 餵食">
+                    <div class="feed-item">
+                        <label class="checkbox-label"><input type="checkbox" value="餵食飼料" class="feed-checkbox"> 飼料</label>
+                        <input type="number" class="qty-input" placeholder="數量" min="0" step="any">
+                    </div>
+                </td>
+                <td data-label="💧 保濕/飲水" class="na-text">不適用</td>
+                <td data-label="💩 排泄/脫皮"><label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label></td>
+                <td data-label="🔒 確認鎖缸" class="na-text">不適用</td>
+                <td data-label="⚖️ 磅重" class="na-text">不適用</td>
+            </tr>
+            <tr>
+                <td class="animal-name">🦎 高冠變色龍</td>
+                <td data-label="📌 餵食">
+                    <div class="feed-item">
+                        <label class="checkbox-label"><input type="checkbox" value="餵食蟋蟀" class="feed-checkbox"> 蟋蟀</label>
+                        <input type="number" class="qty-input" placeholder="數量" min="0" step="any">
+                    </div>
+                </td>
+                <td data-label="💧 保濕/飲水"><label class="checkbox-label"><input type="checkbox" value="噴水"> 噴水</label></td>
+                <td data-label="💩 排泄/脫皮">
+                    <label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label>
+                    <label class="checkbox-label"><input type="checkbox" value="脫皮保濕"> 脫皮保濕</label>
+                </td>
+                <td data-label="🔒 確認鎖缸"><label class="checkbox-label"><input type="checkbox" value="確認鎖缸"> 確認鎖缸</label></td>
+                <td data-label="⚖️ 磅重"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重"> 每 2 星期磅重</label></td>
+            </tr>
+            <tr>
+                <td class="animal-name">🐍 球蟒</td>
+                <td data-label="📌 餵食">
+                    <div class="feed-item">
+                        <label class="checkbox-label"><input type="checkbox" value="餵食乳鼠" class="feed-checkbox"> 乳鼠 (每 2 週)</label>
+                        <input type="number" class="qty-input" placeholder="數量" min="0" step="any">
+                    </div>
+                </td>
+                <td data-label="💧 保濕/飲水">
+                    <label class="checkbox-label"><input type="checkbox" value="噴水"> 噴水</label>
+                    <label class="checkbox-label"><input type="checkbox" value="更換飲用水"> 更換飲用水</label>
+                </td>
+                <td data-label="💩 排泄/脫皮">
+                    <label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label>
+                    <label class="checkbox-label"><input type="checkbox" value="脫皮保濕"> 脫皮保濕</label>
+                </td>
+                <td data-label="🔒 確認鎖缸"><label class="checkbox-label"><input type="checkbox" value="確認鎖缸"> 確認鎖缸</label></td>
+                <td data-label="⚖️ 磅重"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重"> 每 2 星期磅重</label></td>
+            </tr>
+            <tr>
+                <td class="animal-name">🦎 貢山龍蜥</td>
+                <td data-label="📌 餵食">
+                    <div class="feed-item">
+                        <label class="checkbox-label"><input type="checkbox" value="餵食蟋蟀" class="feed-checkbox"> 蟋蟀</label>
+                        <input type="number" class="qty-input" placeholder="數量" min="0" step="any">
+                    </div>
+                </td>
+                <td data-label="💧 保濕/飲水">
+                    <label class="checkbox-label"><input type="checkbox" value="噴水"> 噴水</label>
+                    <label class="checkbox-label"><input type="checkbox" value="更換飲用水"> 更換飲用水</label>
+                </td>
+                <td data-label="💩 排泄/脫皮"><label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label></td>
+                <td data-label="🔒 確認鎖缸"><label class="checkbox-label"><input type="checkbox" value="確認鎖缸"> 確認鎖缸</label></td>
+                <td data-label="⚖️ 磅重"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重"> 每 2 星期磅重</label></td>
+            </tr>
+            <tr>
+                <td class="animal-name">🐢 眼斑水龜</td>
+                <td data-label="📌 餵食">
+                    <div class="feed-item">
+                        <label class="checkbox-label"><input type="checkbox" value="餵食龜糧" class="feed-checkbox"> 龜糧飼料</label>
+                        <input type="number" class="qty-input" placeholder="數量" min="0" step="any">
+                    </div>
+                </td>
+                <td data-label="💧 保濕/飲水"><label class="checkbox-label"><input type="checkbox" value="加水至指定刻度"> 加水至櫃底刻度</label></td>
+                <td data-label="💩 排泄/脫皮"><label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label></td>
+                <td data-label="🔒 確認鎖缸"><label class="checkbox-label"><input type="checkbox" value="確認鎖缸"> 確認鎖缸</label></td>
+                <td data-label="⚖️ 磅重"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重"> 每 2 星期磅重</label></td>
+            </tr>
+            <tr>
+                <td class="animal-name">🐉 鬆獅蜥</td>
+                <td data-label="📌 餵食">
+                    <div class="feed-item">
+                        <label class="checkbox-label"><input type="checkbox" value="餵食蟋蟀" class="feed-checkbox"> 蟋蟀</label>
+                        <input type="number" class="qty-input" placeholder="數量" min="0" step="any">
+                    </div>
+                    <div class="feed-item">
+                        <label class="checkbox-label"><input type="checkbox" value="餵食新鮮蔬菜" class="feed-checkbox"> 新鮮蔬菜</label>
+                        <input type="number" class="qty-input" placeholder="數量" min="0" step="any">
+                    </div>
+                </td>
+                <td data-label="💧 保濕/飲水"><label class="checkbox-label"><input type="checkbox" value="浸泡 15-30 分鐘"> 浸泡 15-30 分(每週2次)</label></td>
+                <td data-label="💩 排泄/脫皮">
+                    <label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label>
+                    <label class="checkbox-label"><input type="checkbox" value="脫皮保濕"> 脫皮保濕</label>
+                </td>
+                <td data-label="🔒 確認鎖缸"><label class="checkbox-label"><input type="checkbox" value="確認鎖缸"> 確認鎖缸</label></td>
+                <td data-label="⚖️ 磅重"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重"> 每 2 星期磅重</label></td>
+            </tr>
+            <tr>
+                <td class="animal-name">🐢 紅腿象龜</td>
+                <td data-label="📌 餵食">
+                    <div class="feed-item">
+                        <label class="checkbox-label"><input type="checkbox" value="餵食新鮮蔬菜" class="feed-checkbox"> 新鮮蔬菜</label>
+                        <input type="number" class="qty-input" placeholder="數量" min="0" step="any">
+                    </div>
+                    <div class="feed-item">
+                        <label class="checkbox-label"><input type="checkbox" value="餵食水果" class="feed-checkbox"> 水果</label>
+                        <input type="number" class="qty-input" placeholder="數量" min="0" step="any">
+                    </div>
+                </td>
+                <td data-label="💧 保濕/飲水">
+                    <label class="checkbox-label"><input type="checkbox" value="浸泡 15-30 分鐘"> 浸泡 15-30 分(每週2次)</label>
+                    <label class="checkbox-label"><input type="checkbox" value="確保大水盆有水"> 大水盆要有水</label>
+                </td>
+                <td data-label="💩 排泄/脫皮"><label class="checkbox-label"><input type="checkbox" value="清理排泄物"> 清理排泄物</label></td>
+                <td data-label="🔒 確認鎖缸"><label class="checkbox-label"><input type="checkbox" value="確認鎖缸"> 確認鎖缸</label></td>
+                <td data-label="⚖️ 磅重"><label class="checkbox-label"><input type="checkbox" value="每 2 星期磅重"> 每 2 星期磅重</label></td>
+            </tr>
+            <tr>
+                <td class="animal-name">🌱 環境植物</td>
+                <td data-label="📌 餵食" class="na-text">不適用</td>
+                <td data-label="💧 保濕/飲水"><label class="checkbox-label"><input type="checkbox" value="全株噴水保濕"> 全株噴水保濕(每日)</label></td>
+                <td data-label="💩 排泄/脫皮" class="na-text">不適用</td>
+                <td data-label="🔒 確認鎖缸" class="na-text">不適用</td>
+                <td data-label="⚖️ 磅重" class="na-text">不適用</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div class="actions">
+        <button class="btn-reset" onclick="resetForm(true)">清除目前表單</button>
+        <button class="btn-save" onclick="saveData()">💾 儲存紀錄</button>
+    </div>
+</div>
+
+<div id="historySection" class="section-container">
+    <h3>護理歷史紀錄</h3>
+    
+    <div style="text-align: right; margin-bottom: 15px;">
+        <button class="btn-export" onclick="exportToExcel()">📥 匯出至 Excel (CSV)</button>
+    </div>
+
+    <div style="overflow-x: auto;">
+        <table style="min-width: 600px;">
+            <thead>
+                <tr>
+                    <th style="width: 15%;">日期</th>
+                    <th style="width: 15%;">負責學生</th>
+                    <th style="width: 60%;">完成項目</th>
+                    <th style="width: 10%;">操作</th>
+                </tr>
+            </thead>
+            <tbody id="recordList">
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        setToday();
+        loadRecords();
+    });
+
+    function switchTab(tabId) {
+        document.getElementById('btn-form').classList.remove('active');
+        document.getElementById('btn-history').classList.remove('active');
+        document.getElementById('formSection').classList.remove('active');
+        document.getElementById('historySection').classList.remove('active');
+
+        if (tabId === 'form') {
+            document.getElementById('btn-form').classList.add('active');
+            document.getElementById('formSection').classList.add('active');
+        } else if (tabId === 'history') {
+            document.getElementById('btn-history').classList.add('active');
+            document.getElementById('historySection').classList.add('active');
+            loadRecords();
+        }
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function setToday() {
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('recordDate').value = today;
+    }
+
+    function loadRecords() {
+        const records = JSON.parse(localStorage.getItem('careRecords_uncombined')) || [];
+        const recordList = document.getElementById('recordList');
+        recordList.innerHTML = ''; 
+
+        if (records.length === 0) {
+            recordList.innerHTML = '<tr><td colspan="4" class="empty-msg">目前尚未有任何護理紀錄</td></tr>';
+            return;
+        }
+
+        records.slice().reverse().forEach((record, index) => {
+            const originalIndex = records.length - 1 - index; 
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+                <td>${record.date}</td>
+                <td><strong>${record.studentName}</strong></td>
+                <td><div class="record-item-details">${record.details}</div></td>
+                <td style="text-align:center;"><button class="btn-delete" onclick="deleteRecord(${originalIndex})">刪除</button></td>
+            `;
+            recordList.appendChild(tr);
+        });
+    }
+
+    function saveData() {
+        const studentName = document.getElementById('studentName').value.trim();
+        const date = document.getElementById('recordDate').value;
+        
+        if (!studentName || !date) {
+            alert('請填寫「負責學生姓名」與「日期」！');
+            return;
+        }
+
+        const rows = document.querySelectorAll('#careTable tbody tr');
+        let completedItems = [];
+
+        rows.forEach(row => {
+            const rawAnimalName = row.querySelector('.animal-name').innerText;
+            const animalName = rawAnimalName.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]\s*/g, '').trim(); 
+            
+            const checkedBoxes = row.querySelectorAll('input[type="checkbox"]:checked');
+            
+            if (checkedBoxes.length > 0) {
+                let actions = Array.from(checkedBoxes).map(cb => {
+                    let actionText = cb.value;
+                    if (cb.classList.contains('feed-checkbox')) {
+                        const wrapper = cb.closest('.feed-item');
+                        const qtyInput = wrapper.querySelector('.qty-input');
+                        if (qtyInput && qtyInput.value.trim() !== '') {
+                            actionText += ` (數量: ${qtyInput.value})`;
+                        }
+                    }
+                    return actionText;
+                });
+                completedItems.push(`<strong>【${animalName}】</strong><br>${actions.join('、')}`);
+            }
+        });
+
+        if (completedItems.length === 0) {
+            alert('請至少勾選一項完成的護理任務！');
+            return;
+        }
+
+        const newRecord = {
+            studentName: studentName,
+            date: date,
+            details: completedItems.join('<br><br>') 
+        };
+
+        const records = JSON.parse(localStorage.getItem('careRecords_uncombined')) || [];
+        records.push(newRecord);
+        localStorage.setItem('careRecords_uncombined', JSON.stringify(records));
+
+        alert('✅ 紀錄已成功儲存！');
+        resetForm(false);
+        switchTab('history');
+    }
+
+    function deleteRecord(index) {
+        if (confirm('確定要刪除這筆紀錄嗎？')) {
+            let records = JSON.parse(localStorage.getItem('careRecords_uncombined')) || [];
+            records.splice(index, 1); 
+            localStorage.setItem('careRecords_uncombined', JSON.stringify(records));
+            loadRecords(); 
+        }
+    }
+
+    function resetForm(showConfirm) {
+        if (!showConfirm || confirm('確定要清除畫面上所有已填寫的資料嗎？')) {
+            document.getElementById('studentName').value = '';
+            setToday();
+            
+            document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
+            document.querySelectorAll('.qty-input').forEach(input => input.value = '');
+        }
+    }
+
+    function exportToExcel() {
+        const records = JSON.parse(localStorage.getItem('careRecords_uncombined')) || [];
+        
+        if (records.length === 0) {
+            alert('目前沒有任何紀錄可以匯出！');
+            return;
+        }
+
+        let csvContent = '\uFEFF'; 
+        csvContent += '日期,負責學生,完成項目\n';
+
+        records.forEach(record => {
+            let textDetails = record.details
+                .replace(/<br><br>/g, ' \n ') 
+                .replace(/<br>/g, ' / ')
+                .replace(/<strong>/g, '')
+                .replace(/<\/strong>/g, '');
+            
+            let safeName = `"${record.studentName}"`;
+            let safeDetails = `"${textDetails}"`;
+            
+            csvContent += `${record.date},${safeName},${safeDetails}\n`;
+        });
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const link = document.createElement("a");
+        const url = URL.createObjectURL(blob);
+        
+        link.setAttribute("href", url);
+        link.setAttribute("download", `動物護理紀錄_${new Date().toISOString().split('T')[0]}.csv`);
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    }
+</script>
+
+</body>
+</html>
