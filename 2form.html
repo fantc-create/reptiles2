@@ -8,8 +8,7 @@
         :root {
             --primary-color: #4A90E2;
             --success-color: #2ecc71;
-            --new-color: #1abc9c; /* 新紀錄專屬綠藍色 */
-            --old-color: #34495e; /* 過去紀錄專屬深灰色 */
+            --history-color: #34495e; /* 歷史紀錄專屬灰色 */
             --border-color: #ddd;
             --bg-color: #f5f7fa;
             --text-color: #333;
@@ -28,16 +27,16 @@
             margin: 0 auto 20px auto;
             display: flex;
             justify-content: center;
-            gap: 8px;
+            gap: 10px;
         }
 
         .tab-btn {
             flex: 1;
-            max-width: 160px;
+            max-width: 200px;
             background-color: #e0e0e0;
             color: #555;
-            padding: 12px 8px;
-            font-size: 0.95em;
+            padding: 12px 10px;
+            font-size: 1em;
             border: none;
             border-radius: 8px;
             font-weight: bold;
@@ -50,10 +49,9 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
         }
         
-        /* 三個按鈕各自的激活顏色 */
+        /* 頁籤激活顏色 */
         #btn-form.active { background-color: var(--primary-color); }
-        #btn-new.active { background-color: var(--new-color); }
-        #btn-old.active { background-color: var(--old-color); }
+        #btn-history.active { background-color: var(--history-color); }
 
         .section-container {
             display: none;
@@ -69,8 +67,7 @@
 
         h2, h3 { text-align: center; color: var(--text-color); margin-top: 0; }
         
-        .history-title-new { color: var(--new-color); margin-bottom: 20px; font-size: 1.4em;}
-        .history-title-old { color: var(--old-color); margin-bottom: 20px; font-size: 1.4em; }
+        .history-title { color: var(--history-color); margin-bottom: 20px; font-size: 1.4em; }
 
         .header-info {
             display: flex;
@@ -120,8 +117,7 @@
         .btn-reset { background-color: #e0e0e0; color: #333; }
 
         /* 歷史紀錄表格樣式 */
-        .table-new th { background-color: var(--new-color); color: white; }
-        .table-old th { background-color: var(--old-color); color: white; }
+        .table-history th { background-color: var(--history-color); color: white; }
         .record-details { line-height: 1.6; white-space: pre-line; color: #444; }
 
         /* 手機版卡片化自動轉換 */
@@ -133,13 +129,9 @@
             td { border: none; border-bottom: 1px solid #eee; padding: 12px; }
             td::before { content: attr(data-label); font-weight: bold; display: block; margin-bottom: 5px; font-size: 0.9em; }
             
-            .table-new tr { border-color: var(--new-color); }
-            .table-new td::before { color: var(--new-color); }
-            .table-new td.animal-name { background-color: var(--new-color); }
-
-            .table-old tr { border-color: var(--old-color); }
-            .table-old td::before { color: var(--old-color); }
-            .table-old td.animal-name { background-color: var(--old-color); }
+            .table-history tr { border-color: var(--history-color); }
+            .table-history td::before { color: var(--history-color); }
+            .table-history td.animal-name { background-color: var(--history-color); }
 
             .na-text::before { display: none; }
             .na-text { text-align: left; color: #ccc; }
@@ -155,8 +147,7 @@
 
 <div class="nav-tabs">
     <button class="tab-btn active" id="btn-form" onclick="switchTab('form')">✏️ 填寫護理表</button>
-    <button class="tab-btn" id="btn-new" onclick="switchTab('new')">🌟 新紀錄</button>
-    <button class="tab-btn" id="btn-old" onclick="switchTab('old')">📅 過去紀錄</button>
+    <button class="tab-btn" id="btn-history" onclick="switchTab('history')">📋 歷史紀錄</button>
 </div>
 
 <div id="formSection" class="section-container active">
@@ -244,25 +235,13 @@
     </div>
 </div>
 
-<div id="newSection" class="section-container">
-    <h3 class="history-title-new">🌟 新紀錄 (今天)</h3>
-    <table class="history-table table-new">
+<div id="historySection" class="section-container">
+    <h3 class="history-title">📋 護理歷史紀錄</h3>
+    <table class="history-table table-history">
         <thead>
             <tr><th style="width: 20%;">護理日期</th><th style="width: 20%;">負責學生</th><th style="width: 60%;">完成項目</th></tr>
         </thead>
-        <tbody id="newList">
-            <tr><td colspan="3" style="text-align:center; color:#999; padding:20px;">正在加載雲端資料...</td></tr>
-        </tbody>
-    </table>
-</div>
-
-<div id="oldSection" class="section-container">
-    <h3 class="history-title-old">📅 過去的紀錄</h3>
-    <table class="history-table table-old">
-        <thead>
-            <tr><th style="width: 20%;">護理日期</th><th style="width: 20%;">負責學生</th><th style="width: 60%;">完成項目</th></tr>
-        </thead>
-        <tbody id="oldList">
+        <tbody id="historyList">
             <tr><td colspan="3" style="text-align:center; color:#999; padding:20px;">正在加載雲端資料...</td></tr>
         </tbody>
     </table>
@@ -284,7 +263,7 @@
         document.getElementById('recordDate').value = new Date().toISOString().split('T')[0];
     });
 
-    // 負責切換三個頁面
+    // 切換填寫與歷史紀錄頁面
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.section-container').forEach(sec => sec.classList.remove('active'));
@@ -292,13 +271,9 @@
         if (tabId === 'form') {
             document.getElementById('btn-form').classList.add('active');
             document.getElementById('formSection').classList.add('active');
-        } else if (tabId === 'new') {
-            document.getElementById('btn-new').classList.add('active');
-            document.getElementById('newSection').classList.add('active');
-            loadHistory();
-        } else if (tabId === 'old') {
-            document.getElementById('btn-old').classList.add('active');
-            document.getElementById('oldSection').classList.add('active');
+        } else if (tabId === 'history') {
+            document.getElementById('btn-history').classList.add('active');
+            document.getElementById('historySection').classList.add('active');
             loadHistory();
         }
     }
@@ -348,14 +323,14 @@
             document.getElementById('loading').style.display = 'none';
             alert('🎉 成功上傳雲端資料庫！');
             resetForm(false);
-            switchTab('new'); // 填完自動跳轉到「新紀錄」頁面
+            switchTab('history'); // 填完自動跳轉到「歷史紀錄」頁面
         }).catch(err => {
             document.getElementById('loading').style.display = 'none';
             alert('連線失敗，請檢查網路或設定！');
         });
     }
 
-    // 💡 核心邏輯：依照今天日期精準分類，過了一天自動變為過去紀錄
+    // 💡 直接載入所有歷史紀錄（由新到舊排序）
     function loadHistory() {
         const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
         
@@ -364,22 +339,10 @@
                 const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
                 const rows = json.table.rows;
                 
-                let newHtml = '';
-                let oldHtml = '';
-                
-                // 獲取今天日期的各種可能格式組合
-                const now = new Date();
-                const y = now.getFullYear();
-                const m = String(now.getMonth() + 1).padStart(2, '0');
-                const d = String(now.getDate()).padStart(2, '0');
-                const mNum = now.getMonth() + 1;
-                const dNum = now.getDate();
-                
-                const format1 = `${y}-${m}-${d}`;
-                const format2 = `${y}/${mNum}/${dNum}`;
-                const format3 = `${y}/${m}/${d}`;
+                let historyHtml = '';
 
                 if (rows && rows.length > 1) {
+                    // 從最新的一筆 (i = rows.length - 1) 開始往前跑迴圈，確保最上面永遠是最新資料
                     for (let i = rows.length - 1; i >= 1; i--) {
                         const r = rows[i].c;
                         if(!r) continue;
@@ -389,32 +352,22 @@
                         const detail = r[3] ? (r[3].v || "") : "";
                         
                         if (name || detail) {
-                            const rowHtml = `<tr>
+                            historyHtml += `<tr>
                                 <td data-label="護理日期">${date}</td>
                                 <td data-label="負責學生"><strong>${name}</strong></td>
                                 <td data-label="完成項目" class="record-details">${detail}</td>
                             </tr>`;
-                            
-                            // 判斷是否為今天的紀錄
-                            if (date.includes(format1) || date.includes(format2) || date.includes(format3)) {
-                                newHtml += rowHtml;
-                            } else {
-                                oldHtml += rowHtml;
-                            }
                         }
                     }
                 }
                 
-                document.getElementById('newList').innerHTML = newHtml || `<tr><td colspan="3" style="text-align:center;color:#666;padding:20px;">今天尚無填寫任何護理紀錄！</td></tr>`;
-                document.getElementById('oldList').innerHTML = oldHtml || `<tr><td colspan="3" style="text-align:center;color:#999;padding:20px;">目前尚無過去的歷史紀錄</td></tr>`;
+                document.getElementById('historyList').innerHTML = historyHtml || `<tr><td colspan="3" style="text-align:center;color:#999;padding:20px;">目前雲端資料庫尚無任何歷史紀錄。</td></tr>`;
                 
             } catch(e) {
-                document.getElementById('newList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;padding:20px;">讀取失敗：請確定試算表已開啟共用權限</td></tr>`;
-                document.getElementById('oldList').innerHTML = ``;
+                document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;padding:20px;">讀取失敗：請確定試算表已開啟「知道連結的任何人都可以檢視」共用權限</td></tr>`;
             }
         }).catch(err => {
-            document.getElementById('newList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;padding:20px;">網路連線錯誤，無法載入雲端資料</td></tr>`;
-            document.getElementById('oldList').innerHTML = ``;
+            document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;padding:20px;">網路連線錯誤，無法載入雲端資料</td></tr>`;
         });
     }
 
