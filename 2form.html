@@ -8,7 +8,6 @@
         :root {
             --primary-color: #4A90E2;
             --success-color: #2ecc71;
-            --danger-color: #e74c3c;
             --border-color: #ddd;
             --bg-color: #f5f7fa;
             --text-color: #333;
@@ -190,8 +189,6 @@
         .btn-save { background-color: var(--success-color); color: white; }
         .btn-reset { background-color: #e0e0e0; color: #333; }
         .btn-export { background-color: #217346; color: white; }
-
-        .btn-delete { background-color: var(--danger-color); color: white; padding: 6px 12px; font-size: 0.9em; flex: none; }
 
         /* 手機版響應式設計：將表格轉為卡片 */
         @media (max-width: 768px) {
@@ -422,10 +419,9 @@
         <table style="min-width: 600px;">
             <thead>
                 <tr>
-                    <th style="width: 15%;">日期</th>
-                    <th style="width: 15%;">負責學生</th>
+                    <th style="width: 20%;">日期</th>
+                    <th style="width: 20%;">負責學生</th>
                     <th style="width: 60%;">完成項目</th>
-                    <th style="width: 10%;">操作</th>
                 </tr>
             </thead>
             <tbody id="recordList">
@@ -468,18 +464,17 @@
         recordList.innerHTML = ''; 
 
         if (records.length === 0) {
-            recordList.innerHTML = '<tr><td colspan="4" class="empty-msg">目前尚未有任何護理紀錄</td></tr>';
+            recordList.innerHTML = '<tr><td colspan="3" class="empty-msg">目前尚未有任何護理紀錄</td></tr>';
             return;
         }
 
-        records.slice().reverse().forEach((record, index) => {
-            const originalIndex = records.length - 1 - index; 
+        // 倒序排列，最新的紀錄在最上面
+        records.slice().reverse().forEach((record) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
                 <td>${record.date}</td>
                 <td><strong>${record.studentName}</strong></td>
                 <td><div class="record-item-details">${record.details}</div></td>
-                <td style="text-align:center;"><button class="btn-delete" onclick="deleteRecord(${originalIndex})">刪除</button></td>
             `;
             recordList.appendChild(tr);
         });
@@ -537,15 +532,6 @@
         alert('✅ 紀錄已成功儲存！');
         resetForm(false);
         switchTab('history');
-    }
-
-    function deleteRecord(index) {
-        if (confirm('確定要刪除這筆紀錄嗎？')) {
-            let records = JSON.parse(localStorage.getItem('careRecords_uncombined')) || [];
-            records.splice(index, 1); 
-            localStorage.setItem('careRecords_uncombined', JSON.stringify(records));
-            loadRecords(); 
-        }
     }
 
     function resetForm(showConfirm) {
