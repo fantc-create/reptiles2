@@ -8,7 +8,7 @@
         :root {
             --primary-color: #4A90E2;
             --success-color: #2ecc71;
-            --history-color: #34495e; /* 歷史紀錄專屬灰色 */
+            --history-color: #34495e; 
             --border-color: #ddd;
             --bg-color: #f5f7fa;
             --text-color: #333;
@@ -49,7 +49,6 @@
             box-shadow: 0 4px 10px rgba(0,0,0,0.15);
         }
         
-        /* 頁籤激活顏色 */
         #btn-form.active { background-color: var(--primary-color); }
         #btn-history.active { background-color: var(--history-color); }
 
@@ -97,13 +96,12 @@
             font-size: 1em;
         }
 
-        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; background: #fff; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 15px; background: #fff; }
         th, td { text-align: left; padding: 15px; border: 1px solid var(--border-color); vertical-align: top; }
         th { background-color: #f8f9fa; font-weight: bold; color: #555; text-align: center; }
         
         .checkbox-label { display: flex; align-items: center; margin-bottom: 10px; cursor: pointer; }
         
-        /* 餵食與磅重排版欄位 */
         .feed-item, .weight-item { display: flex; align-items: center; flex-wrap: wrap; margin-bottom: 10px; gap: 8px; }
         .qty-input, .weight-input { width: 70px; padding: 6px 8px; border: 1px solid var(--border-color); border-radius: 4px; }
         
@@ -116,9 +114,29 @@
         .btn-save { background-color: var(--success-color); color: white; width: 100%; max-width: 300px; }
         .btn-reset { background-color: #e0e0e0; color: #333; }
 
-        /* 歷史紀錄表格樣式 */
         .table-history th { background-color: var(--history-color); color: white; }
         .record-details { line-height: 1.6; white-space: pre-line; color: #444; }
+
+        /* 左下角篩選按鈕樣式 */
+        .filter-container {
+            display: flex;
+            justify-content: flex-start; /* 靠左對齊 */
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .filter-btn {
+            padding: 8px 15px;
+            font-size: 0.9em;
+            background-color: #f0f4f8;
+            color: #555;
+            border: 1px solid #cdd5df;
+            border-radius: 20px;
+        }
+        .filter-btn.active {
+            background-color: var(--history-color);
+            color: white;
+            border-color: var(--history-color);
+        }
 
         /* 手機版卡片化自動轉換 */
         @media (max-width: 768px) {
@@ -245,25 +263,29 @@
             <tr><td colspan="3" style="text-align:center; color:#999; padding:20px;">正在加載雲端資料...</td></tr>
         </tbody>
     </table>
+    
+    <div class="filter-container">
+        <button class="filter-btn active" id="f-all" onclick="applyFilter('all')">顯示全部</button>
+        <button class="filter-btn" id="f-today" onclick="applyFilter('today')">今天紀錄</button>
+        <button class="filter-btn" id="f-past" onclick="applyFilter('past')">過往紀錄</button>
+    </div>
 </div>
 
 <script>
-    // ========================================================
-    // ✅ 雲端設定保持不變
-    // ========================================================
     const GOOGLE_FORM_ID = "1FAIpQLSdDOLdH348TldZy6OIsI5BmL6GHCNuKtq5QxVuAzzQi-K0PxQ"; 
     const SPREADSHEET_ID = "1igi8oFPaC4PTduqaep-RB9jpAFP4G8umdg6Tstdrmfk"; 
     
     const ENTRY_DATE = "entry.2133590603"; 
     const ENTRY_NAME = "entry.801019313"; 
     const ENTRY_TEXT = "entry.668473026"; 
-    // ========================================================
+
+    // 用來暫存分類好的資料
+    let cachedRecords = { all: '', today: '', past: '' };
 
     document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('recordDate').value = new Date().toISOString().split('T')[0];
     });
 
-    // 切換填寫與歷史紀錄頁面
     function switchTab(tabId) {
         document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
         document.querySelectorAll('.section-container').forEach(sec => sec.classList.remove('active'));
@@ -278,7 +300,6 @@
         }
     }
 
-    // 上傳至 Google Form
     function uploadToCloud() {
         const name = document.getElementById('studentName').value.trim();
         const date = document.getElementById('recordDate').value;
@@ -323,14 +344,13 @@
             document.getElementById('loading').style.display = 'none';
             alert('🎉 成功上傳雲端資料庫！');
             resetForm(false);
-            switchTab('history'); // 填完自動跳轉到「歷史紀錄」頁面
+            switchTab('history'); 
         }).catch(err => {
             document.getElementById('loading').style.display = 'none';
             alert('連線失敗，請檢查網路或設定！');
         });
     }
 
-    // 💡 直接載入所有歷史紀錄（由新到舊排序）
     function loadHistory() {
         const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
         
@@ -339,36 +359,74 @@
                 const json = JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1));
                 const rows = json.table.rows;
                 
-                let historyHtml = '';
+                let allHtml = '', todayHtml = '', pastHtml = '';
+                
+                // 動態抓取設備的「今天日期」，未來任何一天都會自動適用
+                const now = new Date();
+                const y = now.getFullYear();
+                const m = String(now.getMonth() + 1).padStart(2, '0');
+                const d = String(now.getDate()).padStart(2, '0');
+                const mNum = now.getMonth() + 1;
+                const dNum = now.getDate();
+                
+                const todayFormats = [`${y}-${m}-${d}`, `${y}/${mNum}/${dNum}`, `${y}/${m}/${d}`];
 
                 if (rows && rows.length > 1) {
-                    // 從最新的一筆 (i = rows.length - 1) 開始往前跑迴圈，確保最上面永遠是最新資料
                     for (let i = rows.length - 1; i >= 1; i--) {
                         const r = rows[i].c;
                         if(!r) continue;
                         
-                        const date = r[1] ? (r[1].f || r[1].v || "") : "";
+                        const dateStr = r[1] ? (r[1].f || r[1].v || "") : "";
                         const name = r[2] ? (r[2].v || "") : "";
                         const detail = r[3] ? (r[3].v || "") : "";
                         
                         if (name || detail) {
-                            historyHtml += `<tr>
-                                <td data-label="護理日期">${date}</td>
+                            const rowHtml = `<tr>
+                                <td data-label="護理日期">${dateStr}</td>
                                 <td data-label="負責學生"><strong>${name}</strong></td>
                                 <td data-label="完成項目" class="record-details">${detail}</td>
                             </tr>`;
+                            
+                            allHtml += rowHtml;
+                            
+                            // 判斷是否為今天
+                            let isToday = todayFormats.some(format => dateStr.includes(format));
+                            if (isToday) {
+                                todayHtml += rowHtml;
+                            } else {
+                                pastHtml += rowHtml;
+                            }
                         }
                     }
                 }
                 
-                document.getElementById('historyList').innerHTML = historyHtml || `<tr><td colspan="3" style="text-align:center;color:#999;padding:20px;">目前雲端資料庫尚無任何歷史紀錄。</td></tr>`;
+                // 暫存在變數中，準備給按鈕切換
+                cachedRecords.all = allHtml || `<tr><td colspan="3" style="text-align:center;color:#999;padding:20px;">目前尚無任何紀錄</td></tr>`;
+                cachedRecords.today = todayHtml || `<tr><td colspan="3" style="text-align:center;color:#999;padding:20px;">今天尚無填寫任何紀錄</td></tr>`;
+                cachedRecords.past = pastHtml || `<tr><td colspan="3" style="text-align:center;color:#999;padding:20px;">尚無過往紀錄</td></tr>`;
+                
+                // 預設顯示全部
+                applyFilter('all');
                 
             } catch(e) {
-                document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;padding:20px;">讀取失敗：請確定試算表已開啟「知道連結的任何人都可以檢視」共用權限</td></tr>`;
+                document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;padding:20px;">讀取失敗：請確定試算表已開啟共用權限</td></tr>`;
             }
         }).catch(err => {
             document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;padding:20px;">網路連線錯誤，無法載入雲端資料</td></tr>`;
         });
+    }
+
+    // 左下角按鈕切換功能
+    function applyFilter(type) {
+        // 替換表格內容
+        document.getElementById('historyList').innerHTML = cachedRecords[type];
+        
+        // 切換按鈕的顏色 (啟用狀態)
+        document.getElementById('f-all').classList.remove('active');
+        document.getElementById('f-today').classList.remove('active');
+        document.getElementById('f-past').classList.remove('active');
+        
+        document.getElementById('f-' + type).classList.add('active');
     }
 
     function resetForm(confirmAction) {
