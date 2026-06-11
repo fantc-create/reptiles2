@@ -117,7 +117,6 @@
         .table-history th { background-color: var(--history-color); color: white; }
         .record-details { line-height: 1.6; white-space: pre-line; color: #444; }
 
-        /* 左下角篩選按鈕樣式 */
         .filter-container {
             display: flex;
             justify-content: flex-start; 
@@ -139,7 +138,6 @@
             border-color: var(--history-color);
         }
 
-        /* 手機版卡片化自動轉換 */
         @media (max-width: 768px) {
             table, thead, tbody, th, td, tr { display: block; width: 100%; box-sizing: border-box; }
             thead { display: none; }
@@ -350,6 +348,7 @@
         });
     }
 
+    // 🛠️ 核心精準分流演算法
     function loadHistory() {
         const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
         
@@ -360,29 +359,19 @@
                 
                 let allHtml = '', todayHtml = '', pastHtml = '';
                 
-                // 獲取目前的今天日期
-                const now = new Date();
-                const y = now.getFullYear();
-                const m = String(now.getMonth() + 1).padStart(2, '0');
-                const d = String(now.getDate()).padStart(2, '0');
-                const mNum = now.getMonth() + 1;
-                const dNum = now.getDate();
-                
-                // 🛠️ 關鍵修復：除了原本的年/月/日，額外補上日/月/年的比對樣式（例如 11/6/2026 和 11/06/2026）
-                const todayFormats = [
-                    `${y}-${m}-${d}`, 
-                    `${y}/${mNum}/${dNum}`, 
-                    `${y}/${m}/${d}`,
-                    `${dNum}/${mNum}/${y}`,  // 支援 11/6/2026
-                    `${d}/${m}/${y}`         // 支援 11/06/2026
-                ];
+                // 1. 抓取手機當前的真實本地「年、月、日」數字
+                const today = new Date();
+                const todayYY = today.getFullYear();
+                const todayMM = today.getMonth(); // 0-11
+                const todayDD = today.getDate();
 
                 if (rows && rows.length > 1) {
                     for (let i = rows.length - 1; i >= 1; i--) {
                         const r = rows[i].c;
                         if(!r) continue;
                         
-                        const dateStr = r[1] ? (r[1].f || r[1].v || "") : "";
+                        const cellDate = r[1]; 
+                        const dateStr = cellDate ? (cellDate.f || cellDate.v || "") : "";
                         const name = r[2] ? (r[2].v || "") : "";
                         const detail = r[3] ? (r[3].v || "") : "";
                         
@@ -395,8 +384,44 @@
                             
                             allHtml += rowHtml;
                             
-                            // 比對字串，只要符合其中一個格式就代表是今天
-                            let isToday = todayFormats.some(format => dateStr.includes(format));
+                            let isToday = false;
+                            
+                            if (cellDate) {
+                                const vStr = String(cellDate.v);
+                                let rowYY = null, rowMM = null, rowDD = null;
+
+                                // 模式 A：如果是 Google 原生 Date 格式物件例如 "Date(2026,5,11)"
+                                if (vStr.startsWith('Date(')) {
+                                    const matches = vStr.match(/\d+/g);
+                                    if (matches && matches.length >= 3) {
+                                        rowYY = parseInt(matches[0]);
+                                        rowMM = parseInt(matches[1]); // Google底層月份也是 0-11，免調整
+                                        rowDD = parseInt(matches[2]);
+                                    }
+                                } else {
+                                    // 模式 B：解構純文字日期字串 (適應 11/6/2026、11/06/2026 或 2026-06-11 等)
+                                    const parts = dateStr.split(/[-\/]/).map(p => parseInt(p));
+                                    if (parts.length === 3) {
+                                        if (parts[0] > 1900) { 
+                                            // 格式為 YYYY-MM-DD
+                                            rowYY = parts[0]; 
+                                            rowMM = parts[1] - 1; 
+                                            rowDD = parts[2];
+                                        } else {
+                                            // 格式為 日/月/年 (如 11/6/2026)
+                                            rowYY = parts[2]; 
+                                            rowMM = parts[1] - 1; 
+                                            rowDD = parts[0];
+                                        }
+                                    }
+                                }
+
+                                // 精準進行「年、月、日」數值比對，徹底排除一切時區、時間干擾
+                                if (rowYY === todayYY && rowMM === todayMM && rowDD === todayDD) {
+                                    isToday = true;
+                                }
+                            }
+
                             if (isToday) {
                                 todayHtml += rowHtml;
                             } else {
@@ -410,7 +435,13 @@
                 cachedRecords.today = todayHtml || `<tr><td colspan="3" style="text-align:center;color:#999;padding:20px;">今天尚無填寫任何紀錄</td></tr>`;
                 cachedRecords.past = pastHtml || `<tr><td colspan="3" style="text-align:center;color:#999;padding:20px;">尚無過往紀錄</td></tr>`;
                 
-                applyFilter('all');
+                const currentActive = document.querySelector('.filter-btn.active');
+                if (currentActive) {
+                    const currentType = currentActive.id.replace('f-', '');
+                    applyFilter(currentType);
+                } else {
+                    applyFilter('all');
+                }
                 
             } catch(e) {
                 document.getElementById('historyList').innerHTML = `<tr><td colspan="3" style="text-align:center;color:red;padding:20px;">讀取失敗：請確定試算表已開啟共用權限</td></tr>`;
