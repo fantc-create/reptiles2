@@ -8,6 +8,7 @@
         :root {
             --primary-color: #4A90E2;
             --success-color: #2ecc71;
+            --excel-color: #217346;
             --border-color: #ddd;
             --bg-color: #f5f7fa;
             --text-color: #333;
@@ -173,6 +174,14 @@
             flex-wrap: wrap;
         }
 
+        .history-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
         button {
             padding: 12px 25px;
             font-size: 1.1em;
@@ -186,9 +195,23 @@
         }
 
         button:active { transform: scale(0.98); }
+        button:disabled { opacity: 0.6; cursor: not-allowed; }
         .btn-save { background-color: var(--success-color); color: white; }
         .btn-reset { background-color: #e0e0e0; color: #333; }
-        .btn-export { background-color: #217346; color: white; }
+        .btn-sync { background-color: var(--primary-color); color: white; }
+        .btn-export { background-color: var(--excel-color); color: white; }
+
+        /* 複製結果呈現區 */
+        #copyResultArea {
+            display: none;
+            margin-top: 25px;
+            background-color: #fff9e6;
+            border: 2px dashed #ffeaa7;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: left;
+            animation: fadeIn 0.3s ease;
+        }
 
         /* 手機版響應式設計：將表格轉為卡片 */
         @media (max-width: 768px) {
@@ -239,9 +262,39 @@
 
         .record-item-details { line-height: 1.8; margin-top: 5px; }
         .empty-msg { text-align: center; color: #999; padding: 40px 20px; }
+
+        /* 載入中遮罩層 */
+        #loadingOverlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            z-index: 9999;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary-color);
+        }
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid var(--primary-color);
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin-bottom: 10px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
+
+<div id="loadingOverlay">
+    <div class="spinner"></div>
+    <div id="loadingText">雲端資料讀取中...</div>
+</div>
 
 <div class="nav-tabs">
     <button class="tab-btn active" id="btn-form" onclick="switchTab('form')">✏️ 填寫紀錄</button>
@@ -404,14 +457,25 @@
 
     <div class="actions">
         <button class="btn-reset" onclick="resetForm(true)">清除目前表單</button>
-        <button class="btn-save" onclick="saveData()">💾 儲存紀錄</button>
+        <button class="btn-save" onclick="generateAndCopyRecord()">一鍵打包複製並登記</button>
+    </div>
+
+    <div id="copyResultArea">
+        <h3 style="color: var(--excel-color); text-align: left; margin-bottom: 8px;">🎉 護理紀錄已成功複製到剪貼簿！</h3>
+        <p style="margin: 0 0 12px 0; color: #555; font-size: 0.95em; line-height: 1.5;">
+            請點擊下方按鈕打開雲端試算表，在<strong>最新空白一列的第一格（A欄 日期）</strong>長按並選擇<strong>「貼上」</strong>，資料就會完美自動填入 A、B、C 三個欄位！
+        </p>
+        <div style="text-align: center;">
+            <button class="btn-export" onclick="goToGoogleSheet()" style="max-width: 100%; width: 100%;">點此打開雲端試算表去貼上</button>
+        </div>
     </div>
 </div>
 
 <div id="historySection" class="section-container">
-    <h3>護理歷史紀錄</h3>
+    <h3>☁️ 雲端歷史紀錄 (免 API 即時同步版)</h3>
     
-    <div style="text-align: right; margin-bottom: 15px;">
+    <div class="history-actions">
+        <button class="btn-sync" onclick="loadRecords()">🔄 重新整理 / 同步最新紀錄</button>
         <button class="btn-export" onclick="exportToExcel()">📥 匯出至 Excel (CSV)</button>
     </div>
 
@@ -425,16 +489,38 @@
                 </tr>
             </thead>
             <tbody id="recordList">
+                <tr><td colspan="3" class="empty-msg">請點擊上方按鈕同步雲端紀錄</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
+    // ==========================================
+    // ⚠️ 免 API 設定：請填入你的 Google 試算表資訊 ⚠️
+    // ==========================================
+    // 1. 請在此填入試算表 ID（網址列中 /d/ 後面那一長串英數組合）
+    const SPREADSHEET_ID = "請把你的_GOOGLE_試算表_ID_貼在這裡";
+    
+    // 2. 請在此貼上共用網址（設為：知道連結的任何人都可以檢視）
+    const SPREADSHEET_URL = "請把你的_GOOGLE_試算表_共用網址_貼在這裡";
+    // ==========================================
+
+    // 全域變數：用於儲存從試算表直接下載的歷史纪录
+    let currentCloudRecords = [];
+
     document.addEventListener('DOMContentLoaded', () => {
         setToday();
-        loadRecords();
     });
+
+    function showLoading(text) {
+        document.getElementById('loadingText').innerText = text;
+        document.getElementById('loadingOverlay').style.display = 'flex';
+    }
+
+    function hideLoading() {
+        document.getElementById('loadingOverlay').style.display = 'none';
+    }
 
     function switchTab(tabId) {
         document.getElementById('btn-form').classList.remove('active');
@@ -448,7 +534,12 @@
         } else if (tabId === 'history') {
             document.getElementById('btn-history').classList.add('active');
             document.getElementById('historySection').classList.add('active');
-            loadRecords();
+            // 切換到歷史紀錄時自動讀取一次
+            if(SPREADSHEET_ID !== "請把你的_GOOGLE_試算表_ID_貼在這裡") {
+                loadRecords();
+            } else {
+                alert("請先在程式碼中設定 SPREADSHEET_ID 才能讀取雲端同步歷史紀錄！");
+            }
         }
         window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -458,29 +549,75 @@
         document.getElementById('recordDate').value = today;
     }
 
+    // 🌟 免 API 直接透過雲端視覺化接口讀取公開的 Google 試算表 🌟
     function loadRecords() {
-        const records = JSON.parse(localStorage.getItem('careRecords_uncombined')) || [];
-        const recordList = document.getElementById('recordList');
-        recordList.innerHTML = ''; 
+        if(SPREADSHEET_ID === "請把你的_GOOGLE_試算表_ID_貼在這裡") return;
 
-        if (records.length === 0) {
-            recordList.innerHTML = '<tr><td colspan="3" class="empty-msg">目前尚未有任何護理紀錄</td></tr>';
-            return;
-        }
+        showLoading("正在免 API 直連雲端同步中...");
+        
+        // 使用 Google 試算表的 Visualization Query URL (完全免 API key，安全且支援儲存格內換行)
+        const gvizUrl = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:json`;
 
-        // 倒序排列，最新的紀錄在最上面
-        records.slice().reverse().forEach((record) => {
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-                <td>${record.date}</td>
-                <td><strong>${record.studentName}</strong></td>
-                <td><div class="record-item-details">${record.details}</div></td>
-            `;
-            recordList.appendChild(tr);
-        });
+        fetch(gvizUrl)
+            .then(response => response.text())
+            .then(text => {
+                // 清理回傳的外殼字串，將其轉為純 JSON
+                const jsonText = text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1);
+                const json = JSON.parse(jsonText);
+                const rows = json.table.rows;
+                
+                currentCloudRecords = [];
+
+                if (rows && rows.length > 0) {
+                    rows.forEach((row) => {
+                        if (!row || !row.c) return;
+                        // 讀取 A, B, C 三個欄位
+                        let date = row.c[0] ? (row.c[0].f || row.c[0].v || "") : "";
+                        let student = row.c[1] ? (row.c[1].v || "") : "";
+                        let details = row.c[2] ? (row.c[2].v || "") : "";
+
+                        // 略過首列標題列
+                        if (date === "日期" || (!date && !student && !details)) return;
+
+                        // 還原換行符號為網頁 <br>
+                        let safeDetails = String(details).replace(/\n/g, "<br>");
+
+                        currentCloudRecords.push({
+                            date: date,
+                            studentName: student,
+                            details: safeDetails
+                        });
+                    });
+                }
+
+                const recordList = document.getElementById('recordList');
+                recordList.innerHTML = ''; 
+
+                if (currentCloudRecords.length === 0) {
+                    recordList.innerHTML = '<tr><td colspan="3" class="empty-msg">目前雲端尚未有任何紀錄</td></tr>';
+                } else {
+                    // 倒序排列，最新的紀錄在最上面
+                    currentCloudRecords.slice().reverse().forEach((record) => {
+                        const tr = document.createElement('tr');
+                        tr.innerHTML = `
+                            <td>${record.date}</td>
+                            <td><strong>${record.studentName}</strong></td>
+                            <td><div class="record-item-details">${record.details}</div></td>
+                        `;
+                        recordList.appendChild(tr);
+                    });
+                }
+                hideLoading();
+            })
+            .catch(error => {
+                console.error('讀取失敗:', error);
+                alert("同步失敗！請確認試算表已開啟「知道連結的任何人都可以檢視」權限，且 ID 是否正確。");
+                hideLoading();
+            });
     }
 
-    function saveData() {
+    // 🌟 打包數據並巧妙利用 Tab 鍵實現「免 API 跨欄位貼上」功能 🌟
+    function generateAndCopyRecord() {
         const studentName = document.getElementById('studentName').value.trim();
         const date = document.getElementById('recordDate').value;
         
@@ -495,7 +632,6 @@
         rows.forEach(row => {
             const rawAnimalName = row.querySelector('.animal-name').innerText;
             const animalName = rawAnimalName.replace(/[\uD800-\uDBFF][\uDC00-\uDFFF]\s*/g, '').trim(); 
-            
             const checkedBoxes = row.querySelectorAll('input[type="checkbox"]:checked');
             
             if (checkedBoxes.length > 0) {
@@ -510,7 +646,7 @@
                     }
                     return actionText;
                 });
-                completedItems.push(`<strong>【${animalName}】</strong><br>${actions.join('、')}`);
+                completedItems.push(`【${animalName}】\n${actions.join('、')}`);
             }
         });
 
@@ -519,51 +655,73 @@
             return;
         }
 
-        const newRecord = {
-            studentName: studentName,
-            date: date,
-            details: completedItems.join('<br><br>') 
-        };
+        // 重要科技：使用 \t (Tab) 隔開數據，當貼上到 Excel/Google 試算表時，會自動拆分到 A、B、C 三個欄位
+        // 在完成項目外加上雙引號，可以確保裡面的換行不會破壞 Excel 的列格式
+        const detailsText = completedItems.join('\n\n');
+        const pasteString = `${date}\t${studentName}\t"${detailsText.replace(/"/g, '""')}"`;
 
-        const records = JSON.parse(localStorage.getItem('careRecords_uncombined')) || [];
-        records.push(newRecord);
-        localStorage.setItem('careRecords_uncombined', JSON.stringify(records));
+        // 寫入剪貼簿
+        navigator.clipboard.writeText(pasteString).then(() => {
+            document.getElementById('copyResultArea').style.display = 'block';
+            window.scrollTo({
+                top: document.getElementById('copyResultArea').offsetTop,
+                behavior: 'smooth'
+            });
+        }).catch(err => {
+            // 老舊手機手機相容備用方案
+            const tempTextArea = document.createElement('textarea');
+            tempTextArea.value = pasteString;
+            document.body.appendChild(tempTextArea);
+            tempTextArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(tempTextArea);
+            
+            document.getElementById('copyResultArea').style.display = 'block';
+            window.scrollTo({
+                top: document.getElementById('copyResultArea').offsetTop,
+                behavior: 'smooth'
+            });
+        });
+    }
 
-        alert('✅ 紀錄已成功儲存！');
-        resetForm(false);
-        switchTab('history');
+    function goToGoogleSheet() {
+        if(SPREADSHEET_URL === "請把你的_GOOGLE_試算表_共用網址_貼在這裡") {
+            alert("請先在程式碼中填寫 SPREADSHEET_URL！");
+            return;
+        }
+        window.open(SPREADSHEET_URL, '_blank');
     }
 
     function resetForm(showConfirm) {
         if (!showConfirm || confirm('確定要清除畫面上所有已填寫的資料嗎？')) {
             document.getElementById('studentName').value = '';
             setToday();
-            
             document.querySelectorAll('input[type="checkbox"]').forEach(cb => cb.checked = false);
             document.querySelectorAll('.qty-input').forEach(input => input.value = '');
+            document.getElementById('copyResultArea').style.display = 'none';
         }
     }
 
+    // 匯出功能：從剛才免 API 抓下來的陣列直接轉成網頁端下載的 Excel (CSV)
     function exportToExcel() {
-        const records = JSON.parse(localStorage.getItem('careRecords_uncombined')) || [];
-        
-        if (records.length === 0) {
-            alert('目前沒有任何紀錄可以匯出！');
+        if (currentCloudRecords.length === 0) {
+            alert('目前沒有同步好的雲端紀錄可以匯出！請先點擊「重新整理」按鈕。');
             return;
         }
 
-        let csvContent = '\uFEFF'; 
+        let csvContent = '\uFEFF'; // 加入 BOM 確保 Excel 開啟不亂碼
         csvContent += '日期,負責學生,完成項目\n';
 
-        records.forEach(record => {
+        currentCloudRecords.forEach(record => {
+            // 清理 HTML 標籤
             let textDetails = record.details
                 .replace(/<br><br>/g, ' \n ') 
-                .replace(/<br>/g, ' / ')
+                .replace(/<br>/g, ' / ')        
                 .replace(/<strong>/g, '')
                 .replace(/<\/strong>/g, '');
             
-            let safeName = `"${record.studentName}"`;
-            let safeDetails = `"${textDetails}"`;
+            let safeName = `"${record.studentName.replace(/"/g, '""')}"`;
+            let safeDetails = `"${textDetails.replace(/"/g, '""')}"`;
             
             csvContent += `${record.date},${safeName},${safeDetails}\n`;
         });
@@ -573,7 +731,7 @@
         const url = URL.createObjectURL(blob);
         
         link.setAttribute("href", url);
-        link.setAttribute("download", `動物護理紀錄_${new Date().toISOString().split('T')[0]}.csv`);
+        link.setAttribute("download", `雲端動物護理紀錄匯出_${new Date().toISOString().split('T')[0]}.csv`);
         link.style.visibility = 'hidden';
         document.body.appendChild(link);
         link.click();
